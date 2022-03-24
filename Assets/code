@@ -1,0 +1,167 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Player : MonoBehaviour
+{
+    private Rigidbody2D rB;
+    private CapsuleCollider2D cCollider;
+    private BoxCollider2D feetCollider;
+    [SerializeField] BoxCollider2D headCollider, crouchCollider;
+    private LayerMask ground;
+    private float horizontalMove,originalSpeed;
+    [SerializeField] float speed, jumpingForce, runningSpeedAdjustment;
+    private Animator anim;
+    private bool hasRun,L,R;
+    private bool jumpGetPress, downGetPress, downGetRelease;
+    private float runningTimerA = 0, runningTimerB = 0, runningTimerC = 0;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        rB = GetComponent<Rigidbody2D>();
+        anim = GetComponent<Animator>();
+        cCollider = GetComponent<CapsuleCollider2D>();
+        feetCollider = GetComponent<BoxCollider2D>();
+        ground = LayerMask.GetMask("Ground");
+        originalSpeed = speed;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        horizontalMove = Input.GetAxisRaw("Horizontal");
+        if (Input.GetButtonUp("Horizontal")) 
+        {
+            runningTimerA = 0;
+            runningTimerB = 0;
+            anim.SetBool("startToRun", false);
+        }
+        if (Input.GetButtonDown("Jump")) 
+        {
+            jumpGetPress = true;
+        }
+        if (Input.GetButtonDown("Crouch")) 
+        {
+            downGetPress = true;
+        }
+        else if (Input.GetButtonUp("Crouch")) 
+        {
+            downGetPress = false;
+            downGetRelease = true;
+        }
+        SwitchJumpingAnimation();
+    }
+
+    void FixedUpdate() 
+    {
+        HorizontalMovement();
+        Jumping();
+        Crouch();
+    }
+
+    void HorizontalMovement() 
+    {   
+        if (!anim.GetBool("crouch"))
+        {
+            anim.SetBool("standUp", false);
+            rB.velocity = new Vector2(speed*horizontalMove*Time.fixedDeltaTime, rB.velocity.y);
+            if (horizontalMove != 0) 
+            {   
+                anim.SetBool("stopRun", false);
+                anim.SetBool("startToRun", true);
+                runningTimerA += Time.fixedDeltaTime;    //0.02
+                if ( runningTimerA>=0.2f) 
+                {
+                    anim.SetBool("startToRun", false);
+                    anim.SetBool("isRunning", true);
+                    speed = originalSpeed + runningSpeedAdjustment;
+                    runningTimerC = 0;
+                }
+                hasRun = true;
+            }
+            else if (horizontalMove == 0 && hasRun) 
+            {   
+                runningTimerC += Time.fixedDeltaTime;
+                if (runningTimerC >=0.1f) 
+                {
+                    anim.SetBool("stopRun", true);
+                    runningTimerB +=Time.fixedDeltaTime;
+                    if (runningTimerB >= 0.3f)
+                    {
+                        anim.SetBool("isRunning", false);
+                        anim.SetBool("stopRun", false);
+                        runningTimerA = 0;
+                        runningTimerB = 0;
+                        hasRun = false;
+                    }
+                }
+            }
+        }
+        if (horizontalMove != 0) 
+        {
+            transform.localScale = new Vector3(horizontalMove, 1, 1);
+        }
+        if (!anim.GetBool("isRunning")) 
+        {   
+            speed = originalSpeed;
+        }
+    }
+
+    void Jumping() 
+    {
+        if (jumpGetPress &&  !anim.GetBool("crouch"))
+        {
+            if (feetCollider.IsTouchingLayers(ground)) 
+            {
+                rB.velocity = new Vector2(rB.velocity.x, jumpingForce*Time.fixedDeltaTime);
+                anim.SetBool("jumping", true);
+                jumpGetPress = false;
+            }
+        }
+    }
+
+    void SwitchJumpingAnimation() 
+    {
+        if (anim.GetBool("jumping")) 
+        {
+            if (rB.velocity.y < 0)
+            {   
+                anim.SetBool("jumping", false);
+                anim.SetBool("falling", true);
+            }
+        }
+        else if (feetCollider.IsTouchingLayers(ground)) 
+        {   
+            anim.SetBool("falling", false);
+        }
+        if (!feetCollider.IsTouchingLayers(ground) && rB.velocity.y < 0) 
+        {
+            anim.SetBool("falling", true);
+        }
+    }
+
+    void Crouch() 
+    {
+        if (downGetPress && !anim.GetBool("jumping") && !anim.GetBool("falling") && feetCollider.IsTouchingLayers(ground)) 
+        {
+            anim.SetBool("crouch", true);
+            jumpGetPress = false;
+            cCollider.enabled = false;
+            crouchCollider.enabled = true;
+            headCollider.enabled = false;
+            rB.velocity = new Vector2(0, rB.velocity.y);
+            anim.SetBool("isRunning", false);
+        }
+        else if (downGetRelease) 
+        {
+            anim.SetBool("crouch", false);
+            anim.SetBool("standUp", true);
+            downGetRelease = false;
+            cCollider.enabled = true;
+            crouchCollider.enabled = false;
+            headCollider.enabled = true;
+        }
+    }
+
+}
