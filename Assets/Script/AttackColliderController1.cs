@@ -26,8 +26,6 @@ public class AttackColliderController1 : SupAttackColliderController
     public void ActivateAttack1() 
     {
         attackCollider.enabled = true;
-        GameObject parent = transform.parent.gameObject;
-        Debug.Log(parent.transform.position.x);
     }
 
     public void InactivateAttack1() 
