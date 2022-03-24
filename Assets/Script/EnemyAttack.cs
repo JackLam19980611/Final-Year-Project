@@ -48,7 +48,10 @@ public class EnemyAttack : MonoBehaviour
             }
             else 
             {   
-                Player.instance.PlayerTakeDamage(parentScript.damage);
+                if(!Player.instance.isDodging)
+                {
+                    Player.instance.PlayerTakeDamage(parentScript.damage);
+                }
             }
         }   
     }
