@@ -15,7 +15,6 @@ public class StopRunBehaviour : StateMachineBehaviour
     {
         if (Player.instance.joystick.Horizontal !=0 || Player.instance.isCrouching) 
         {   
-            //Input.GetButton("Horizontal") || Player.instance.isCrouching
             Player.instance.anim.Play("Idle");
         }
         if (Player.instance.isAttacking) 

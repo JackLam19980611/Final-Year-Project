@@ -7,7 +7,7 @@ public class Attack1Holding : StateMachineBehaviour
     // OnStateEnter is called when a transition starts and the state machine starts to evaluate this state
     override public void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
     {
-        //Player.instance.canJump = true;    
+
     }
 
     // OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks
@@ -18,17 +18,12 @@ public class Attack1Holding : StateMachineBehaviour
         {   
             Player.instance.anim.Play("Attack2");
         }
-        /*if (Player.instance.CheckInput()) 
-        {
-            Player.instance.anim.Play("Idle"); // Exit the current animation (Attack) then it will follow the over side animation flow chart
-        }*/
     }
 
     // OnStateExit is called when a transition ends and the state machine finishes evaluating this state
     override public void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
     {
         Player.instance.isAttacking = false;
-        //Player.instance.canMove = true;
     }
 
     // OnStateMove is called right after Animator.OnAnimatorMove()

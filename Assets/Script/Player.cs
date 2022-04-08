@@ -43,7 +43,6 @@ public class Player : MonoBehaviour
     {
         rB = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
-        //bodyCollider = GetComponent<CapsuleCollider2D>();
         feetCollider = transform.Find("VirtualBoxFeet").gameObject.GetComponent<BoxCollider2D>();
         climbCollider = transform.Find("VirtualBoxClimb").gameObject.GetComponent<BoxCollider2D>();
         ground = LayerMask.GetMask("Ground");
@@ -60,19 +59,6 @@ public class Player : MonoBehaviour
         greenBox = Physics2D.OverlapBox(new Vector2(transform.position.x + (greenXOffset*transform.localScale.x), transform.position.y + greenYOffset), new Vector2(greenXSize, greenYSize), 0f, ground); 
         redBox = Physics2D.OverlapBox(new Vector2(transform.position.x + (redXOffset*transform.localScale.x), transform.position.y + redYOffset), new Vector2(redXSize, redYSize), 0f, ground); 
         JoystickChecking(); 
-        /*if (Input.GetButtonDown("Run")) 
-        {   
-            runGetPress = true;
-        }
-        else if (Input.GetButtonUp("Run")) 
-        {
-            runGetPress = false;
-            anim.SetBool("isRunning", false);
-        }*/
-        /*if (Input.GetButtonDown("Jump") && canJump) 
-        {
-            jumpGetPress = true;
-        }*/
         if (joystick.Vertical < -0.7f)  
         {   
             downGetPress = true;
@@ -91,14 +77,6 @@ public class Player : MonoBehaviour
         {
             fallingAttack = true;
         }
-        /*if (Input.GetButtonDown("Dodge") && !isDodging && feetCollider.IsTouchingLayers(ground))
-        {
-            dodgeGetPress = true;
-        }
-        if (Input.GetButtonDown("Parry") && !isDodging && !isAttacking && !anim.GetBool("jumping") && !anim.GetBool("falling") && feetCollider.IsTouchingLayers(ground) && !isFallingAttack && !isClimbing && !isCrouching) 
-        {
-            parryGetPress = true;
-        }*/
         Parry();
         Attack();
         AirAttacking();
@@ -176,7 +154,6 @@ public class Player : MonoBehaviour
             rB.velocity = new Vector2(speed*horizontalMove*Time.fixedDeltaTime, rB.velocity.y);
             if (joystick.Horizontal!=0 && (joystick.Horizontal < 0.5f || joystick.Horizontal >-0.5f )&& !isAttacking)
             {   
-                //joystick.Horizontal !=0 && joystick.Horizontal < 0.5f & joystick.Horizontal >-0.5f && !isAttacking
                 anim.SetBool("walking", true);
                 isMoving = true;
                 isRunning = false;
@@ -197,13 +174,12 @@ public class Player : MonoBehaviour
     {   
         if (joystick.Horizontal!=0 && (joystick.Horizontal > 0.5f || joystick.Horizontal <-0.5f )&&!downGetPress && feetCollider.IsTouchingLayers(ground) && !isAttacking) 
         {   
-            //runGetPress && horizontalMove != 0 &&!downGetPress && feetCollider.IsTouchingLayers(ground) && !isAttacking
             isRunning = true;
             anim.SetBool("walking", false);
             anim.SetBool("isRunning", true);
         }
         else if ((horizontalMove == 0) || isAttacking) 
-        {   //(horizontalMove == 0 && !runGetPress) || (runGetPress && horizontalMove == 0) || isAttacking
+        {   
             isRunning = false;
         }
     }
@@ -453,13 +429,11 @@ public class Player : MonoBehaviour
 
     public void ActivePlayerHitBox() 
     {
-        //PlayerHitBox.instance.ActivateHitBox();
         bodyCollider.enabled = true;
     }
 
     public void InActivePlayerHitBox() 
     {
-        //PlayerHitBox.instance.InActivateHitBox();
         bodyCollider.enabled = false;
     }
     public bool CheckInput() 
@@ -473,18 +447,6 @@ public class Player : MonoBehaviour
         {
             return false;
         } 
-    }
-
-    public bool CheckAttack() 
-    {
-        if (Input.GetButtonDown("Attack") && !anim.GetBool("crouch") && !anim.GetBool("jumping") && !anim.GetBool("falling")) 
-        {   
-            return true;
-        }
-        else
-        {
-            return false;
-        }
     }
 
     private void OnDrawGizmosSelected() 
