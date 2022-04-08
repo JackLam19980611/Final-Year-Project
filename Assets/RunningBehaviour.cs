@@ -7,7 +7,8 @@ public class RunningBehaviour : StateMachineBehaviour
     // OnStateEnter is called when a transition starts and the state machine starts to evaluate this state
     override public void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
     {   
-        Player.instance.speed = Player.instance.originalSpeed + Player.instance.runningSpeedAdjustment;    
+        Player.instance.speed = Player.instance.originalSpeed + Player.instance.runningSpeedAdjustment;
+        Player.instance.runningAudio.Play();    
     }
 
     // OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks
@@ -21,8 +22,9 @@ public class RunningBehaviour : StateMachineBehaviour
         {
             Player.instance.anim.Play("Attack1");
         }
-        if (!Input.GetButton("Horizontal") || !Input.GetButton("Run") && Input.GetButton("Horizontal")) 
+        if (!Player.instance.isRunning) 
         {   
+            // if (!Input.GetButton("Horizontal") || !Input.GetButton("Run") && Input.GetButton("Horizontal"))  original 
             Player.instance.anim.Play("StopRun");
         }
     }
@@ -38,6 +40,7 @@ public class RunningBehaviour : StateMachineBehaviour
     {
         Player.instance.isAttacking = false;
         Player.instance.speed = Player.instance.originalSpeed;
+        Player.instance.runningAudio.Stop();  
     }
 
     // OnStateIK is called right after Animator.OnAnimatorIK()

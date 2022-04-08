@@ -37,7 +37,6 @@ public class AirAttack : SupAttackColliderController
         {   
             Enemy enemy = other.gameObject.GetComponent<Enemy>();
             enemy.MonsterTakeDamage((int)(playerDamage*1.2));
-            //if enemy.r
         }
     }
 }

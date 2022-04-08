@@ -8,10 +8,11 @@ public class DodgeBehaviour : StateMachineBehaviour
     [SerializeField] GameObject DodgeEffect;
     // OnStateEnter is called when a transition starts and the state machine starts to evaluate this state
     override public void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
-    {
+    {   
         Player.instance.rB.velocity = new Vector2(Player.instance.dodgeSpeed*Player.instance.transform.localScale.x*Time.fixedDeltaTime, Player.instance.rB.velocity.y);
         DodgeEffect.transform.localScale = new Vector3(Player.instance.transform.localScale.x, DodgeEffect.transform.localScale.y, DodgeEffect.transform.localScale.z);
         Instantiate(DodgeEffect, new Vector3(Player.instance.transform.position.x, Player.instance.transform.position.y-1, Player.instance.transform.position.z), Quaternion.identity);
+        SoundManager.instance.DodgeAudio();
     }
 
     // OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks

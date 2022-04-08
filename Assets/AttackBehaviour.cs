@@ -12,6 +12,7 @@ public class AttackBehaviour : StateMachineBehaviour
         Player.instance.changeSide = false;
         Player.instance.canParry = false;
         Player.instance.rB.velocity = new Vector2(0,Player.instance.rB.velocity.y);    
+        SoundManager.instance.AttackAudio();
     }
 
     // OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks

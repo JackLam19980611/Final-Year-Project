@@ -7,14 +7,19 @@ public class FallAttack2Behaviour : StateMachineBehaviour
     // OnStateEnter is called when a transition starts and the state machine starts to evaluate this state
     override public void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
     {
-        Player.instance.rB.velocity = new Vector2(0,Player.instance.rB.velocity.y);    
+        Player.instance.canMove = false;
+        Player.instance.canJump = false;
+        Player.instance.changeSide = false;
+        Player.instance.canParry = false;
+        Player.instance.rB.velocity = new Vector2(0,Player.instance.rB.velocity.y);      
+        SoundManager.instance.FallAttackAudio();
     }
 
     // OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks
-    override public void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
-    {
-            
-    }
+    //override public void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
+    //{
+    //    
+    //}
 
     // OnStateExit is called when a transition ends and the state machine finishes evaluating this state
     //override public void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)

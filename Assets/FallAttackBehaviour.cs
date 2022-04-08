@@ -14,7 +14,7 @@ public class FallAttackBehaviour : StateMachineBehaviour
         Player.instance.changeSide = false;
         Player.instance.rB.velocity = new Vector2(0, -600*Time.fixedDeltaTime);    
     }
-
+    
 
     // OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks
     override public void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
@@ -24,7 +24,6 @@ public class FallAttackBehaviour : StateMachineBehaviour
             Player.instance.anim.Play("FallAttack2");
             FAD.transform.localScale = new Vector3(Player.instance.transform.localScale.x, FAD.transform.localScale.y, FAD.transform.localScale.z);
             Instantiate(FAD, new Vector3 (Player.instance.transform.position.x, Player.instance.transform.position.y-1, Player.instance.transform.position.z), Quaternion.identity);
-
         }
 
     }

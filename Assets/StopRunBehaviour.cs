@@ -13,8 +13,9 @@ public class StopRunBehaviour : StateMachineBehaviour
     // OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks
     override public void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
     {
-        if (Input.GetButton("Horizontal") || Player.instance.isCrouching) 
+        if (Player.instance.joystick.Horizontal !=0 || Player.instance.isCrouching) 
         {   
+            //Input.GetButton("Horizontal") || Player.instance.isCrouching
             Player.instance.anim.Play("Idle");
         }
         if (Player.instance.isAttacking) 

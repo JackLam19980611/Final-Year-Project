@@ -8,20 +8,29 @@ public class Player : MonoBehaviour
     public CapsuleCollider2D bodyCollider;
     public BoxCollider2D feetCollider;
     public static Player instance;
-    [SerializeField] BoxCollider2D  crouchCollider, cilmbCollider;
+    [SerializeField] BoxCollider2D  crouchCollider, climbCollider;
     private LayerMask ground, wall;
     public float horizontalMove, rBGravity;
     public float speed, jumpingForce, runningSpeedAdjustment, originalSpeed;
     public Animator anim;
-    public bool runGetPress, attackGetPress, jumpGetPress, downGetPress, downGetRelease, dodgeGetPress, parryGetPress;
-    public bool isMoving, isRunning, isAttacking, isCrouching, isJumping, isFalling, isClimbing, isFallingAttack, isDodging, isParrying;
+    public bool runGetPress, attackGetPress, jumpGetPress, downGetPress, downGetRelease, dodgeGetPress, parryGetPress,climbGetPress;
+    public bool isMoving, isRunning, isAttacking, isCrouching, isJumping, isFalling, isClimbing, isFallingAttack, isDodging, isParrying, isGrabbing;
     public static int currentHP = 100, totalHP = 100;
     public int pDamage = 20, test = 0;
     public bool canMove = true, airAttacked, parrySuccessful, canParry= true;
     public GameObject JumpEffect, FallEffect;
-    private bool GetPlay, fallingAttack; 
-    public bool canJump = true, changeSide = true;
+    private bool fallingAttack; 
+    public bool canJump = true, changeSide = true, GetPlay;
     public int dodgeSpeed;
+    public Joystick joystick;
+    Transform trans;
+    public bool attackButton, grabButton;
+    private SpriteRenderer sR;
+    private Color originalColor;
+    public float flashtime = 0.15f;
+    private bool greenBox, redBox;
+    public float redXOffset=0.32f, redYOffset=0.5f, redXSize=0.5f, redYSize=0.1f, greenXOffset=0.32f, greenYOffset=0.35f, greenXSize=0.5f, greenYSize=0.01f;
+    public AudioSource walkingAudio, runningAudio, landingAudio, getHurtAudio;
 
 
     // Start is called before the first frame update
@@ -35,18 +44,23 @@ public class Player : MonoBehaviour
         rB = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>();
         //bodyCollider = GetComponent<CapsuleCollider2D>();
-        feetCollider = GetComponent<BoxCollider2D>();
+        feetCollider = transform.Find("VirtualBoxFeet").gameObject.GetComponent<BoxCollider2D>();
+        climbCollider = transform.Find("VirtualBoxClimb").gameObject.GetComponent<BoxCollider2D>();
         ground = LayerMask.GetMask("Ground");
         wall = LayerMask.GetMask("Wall");
         originalSpeed = speed;
         rBGravity = rB.gravityScale;
+        sR = GetComponent<SpriteRenderer>();
+        originalColor = sR.color;
     }
 
     // Update is called once per frame
     void Update()
-    {
-        horizontalMove = Input.GetAxisRaw("Horizontal");
-        if (Input.GetButtonDown("Run")) 
+    {   
+        greenBox = Physics2D.OverlapBox(new Vector2(transform.position.x + (greenXOffset*transform.localScale.x), transform.position.y + greenYOffset), new Vector2(greenXSize, greenYSize), 0f, ground); 
+        redBox = Physics2D.OverlapBox(new Vector2(transform.position.x + (redXOffset*transform.localScale.x), transform.position.y + redYOffset), new Vector2(redXSize, redYSize), 0f, ground); 
+        JoystickChecking(); 
+        /*if (Input.GetButtonDown("Run")) 
         {   
             runGetPress = true;
         }
@@ -54,40 +68,41 @@ public class Player : MonoBehaviour
         {
             runGetPress = false;
             anim.SetBool("isRunning", false);
-        }
-        if (Input.GetButtonDown("Jump") && canJump) 
+        }*/
+        /*if (Input.GetButtonDown("Jump") && canJump) 
         {
             jumpGetPress = true;
-        }
-        if (Input.GetButtonDown("Crouch"))  
+        }*/
+        if (joystick.Vertical < -0.7f)  
         {   
             downGetPress = true;
         }
-        else if (Input.GetButtonUp("Crouch")) 
+        else if (joystick.Vertical>= 0) 
         {
             downGetPress = false;
             downGetRelease = true;
         }
-        if (Input.GetButtonDown("Climb") && cilmbCollider.IsTouchingLayers(wall) && (anim.GetBool("jumping") || anim.GetBool("falling") || anim.GetBool("climb"))) 
+        if (climbGetPress) 
         {
             isClimbing = !isClimbing;
+            climbGetPress = false;
         }
-        if ( downGetPress && Input.GetButtonDown("Attack") && (anim.GetBool("jumping") || anim.GetBool("falling"))) 
+        if ( downGetPress && attackButton && (anim.GetBool("jumping") || anim.GetBool("falling"))) 
         {
             fallingAttack = true;
         }
-        if (Input.GetButtonDown("Dodge") && !isDodging && feetCollider.IsTouchingLayers(ground))
+        /*if (Input.GetButtonDown("Dodge") && !isDodging && feetCollider.IsTouchingLayers(ground))
         {
             dodgeGetPress = true;
         }
         if (Input.GetButtonDown("Parry") && !isDodging && !isAttacking && !anim.GetBool("jumping") && !anim.GetBool("falling") && feetCollider.IsTouchingLayers(ground) && !isFallingAttack && !isClimbing && !isCrouching) 
         {
             parryGetPress = true;
-        }
+        }*/
         Parry();
         Attack();
         AirAttacking();
-        //Parry();
+        Grab();
     }
 
     void FixedUpdate() 
@@ -105,13 +120,63 @@ public class Player : MonoBehaviour
         Dodge();
     }
 
+    void JoystickChecking() 
+    {
+        if(joystick.Horizontal <0)
+            horizontalMove = -1;
+        else if(joystick.Horizontal>0)
+            horizontalMove = 1;
+        else
+            horizontalMove = 0;
+    }
+
+    public void JumpButton() 
+    {
+        if (canJump)
+            jumpGetPress = true;
+    }
+    
+    public void DodgeButton()
+    {   
+        if(!isDodging && feetCollider.IsTouchingLayers(ground))
+            dodgeGetPress = true;
+    }
+
+    public void ParryButton()
+    {
+        if (!isDodging && !isAttacking && !anim.GetBool("jumping") && !anim.GetBool("falling") && feetCollider.IsTouchingLayers(ground) && !isFallingAttack && !isClimbing && !isCrouching)
+            parryGetPress = true;
+    }
+
+    public void AttackButton() 
+    {
+        attackButton = true;
+    }
+
+    public void ClimbButton() 
+    {   
+        if (climbCollider.IsTouchingLayers(wall) && (anim.GetBool("jumping") || anim.GetBool("falling") || anim.GetBool("climb")))
+            climbGetPress = true;
+    }
+
+    public void GrabButtonDown() 
+    {
+        grabButton = true;
+    }
+
+    public void GrabButtonUp() 
+    {
+        grabButton = false;
+    }
+    
     void Movement() 
     {       
         if (canMove && feetCollider.IsTouchingLayers(ground) && !fallingAttack && !isDodging)
-        {
+        {   
             rB.velocity = new Vector2(speed*horizontalMove*Time.fixedDeltaTime, rB.velocity.y);
-            if (horizontalMove !=0 && !isAttacking)
-            {
+            if (joystick.Horizontal!=0 && (joystick.Horizontal < 0.5f || joystick.Horizontal >-0.5f )&& !isAttacking)
+            {   
+                //joystick.Horizontal !=0 && joystick.Horizontal < 0.5f & joystick.Horizontal >-0.5f && !isAttacking
                 anim.SetBool("walking", true);
                 isMoving = true;
                 isRunning = false;
@@ -130,14 +195,15 @@ public class Player : MonoBehaviour
 
     void Running() 
     {   
-        if (runGetPress && horizontalMove != 0 &&!downGetPress && feetCollider.IsTouchingLayers(ground) && !isAttacking) 
+        if (joystick.Horizontal!=0 && (joystick.Horizontal > 0.5f || joystick.Horizontal <-0.5f )&&!downGetPress && feetCollider.IsTouchingLayers(ground) && !isAttacking) 
         {   
+            //runGetPress && horizontalMove != 0 &&!downGetPress && feetCollider.IsTouchingLayers(ground) && !isAttacking
             isRunning = true;
             anim.SetBool("walking", false);
             anim.SetBool("isRunning", true);
         }
-        else if ((horizontalMove == 0 && !runGetPress) || (runGetPress && horizontalMove == 0) || isAttacking) 
-        {   
+        else if ((horizontalMove == 0) || isAttacking) 
+        {   //(horizontalMove == 0 && !runGetPress) || (runGetPress && horizontalMove == 0) || isAttacking
             isRunning = false;
         }
     }
@@ -146,7 +212,7 @@ public class Player : MonoBehaviour
     {
         if (jumpGetPress && !anim.GetBool("crouch") && feetCollider.IsTouchingLayers(ground) && !isAttacking && !isDodging || jumpGetPress && anim.GetBool("climb") && !isAttacking && !isDodging) 
         {   
-            JumpEffect.transform.localScale = new Vector3(Player.instance.transform.localScale.x, JumpEffect.transform.localScale.y, JumpEffect.transform.localScale.z);
+            JumpEffect.transform.localScale = new Vector3(transform.localScale.x, JumpEffect.transform.localScale.y, JumpEffect.transform.localScale.z);
             Instantiate(JumpEffect, new Vector3(transform.position.x, transform.position.y-1, transform.position.z), Quaternion.identity);
             rB.velocity = new Vector2(speed*horizontalMove*Time.fixedDeltaTime, jumpingForce*Time.fixedDeltaTime);
             anim.SetBool("jumping", true);
@@ -154,6 +220,7 @@ public class Player : MonoBehaviour
             isJumping = true;   
             isClimbing = false;
             GetPlay = false;
+            SoundManager.instance.JumpAudio();
         }
     }
 
@@ -175,10 +242,12 @@ public class Player : MonoBehaviour
             airAttacked = false;
             anim.SetBool("falling", false); // hasn't use statemachine
             isFalling = false;
-            if (GetPlay == false)
-            {   FallEffect.transform.localScale = new Vector3(Player.instance.transform.localScale.x, FallEffect.transform.localScale.y, FallEffect.transform.localScale.z); 
+            if (GetPlay == false && !isGrabbing)
+            {   
+                FallEffect.transform.localScale = new Vector3(transform.localScale.x, FallEffect.transform.localScale.y, FallEffect.transform.localScale.z); 
                 Instantiate(FallEffect, new Vector3(transform.position.x, transform.position.y-1, transform.position.z), Quaternion.identity);
                 GetPlay = true;
+                Player.instance.landingAudio.Play();
             }
         }
         if (!feetCollider.IsTouchingLayers(ground) && rB.velocity.y < 0) 
@@ -190,14 +259,16 @@ public class Player : MonoBehaviour
         if (anim.GetBool("falling")) 
         {
             jumpGetPress = false;
+            GetPlay = false;
         }
     }
 
     void Attack() 
     {
-        if (Input.GetButtonDown("Attack") && !isAttacking && !anim.GetBool("crouch") && !anim.GetBool("jumping") && !anim.GetBool("falling"))
+        if (attackButton && !isAttacking && !anim.GetBool("crouch") && !anim.GetBool("jumping") && !anim.GetBool("falling"))
         {
             isAttacking = true;
+            attackButton = false;
         }
     }
 
@@ -213,10 +284,12 @@ public class Player : MonoBehaviour
 
     void AirAttacking() 
     {
-        if (Input.GetButtonDown("Attack") && (anim.GetBool("jumping") || anim.GetBool("falling")) && !airAttacked)
+        if (attackButton && (anim.GetBool("jumping") || anim.GetBool("falling")) && !airAttacked)
         {   
             airAttacked = true;
             anim.Play("AirAttack");
+            attackButton = false;
+            SoundManager.instance.AttackAudio();
         }
 
     }
@@ -224,6 +297,13 @@ public class Player : MonoBehaviour
     public void PlayerTakeDamage(int mDamage) 
     {
         currentHP -= mDamage;
+        FlashEffect(flashtime);
+        getHurtAudio.Play();
+        if (currentHP <= 0) 
+        {
+            currentHP = 0;
+            Death();
+        }
     }
 
     void Crouch() 
@@ -251,7 +331,7 @@ public class Player : MonoBehaviour
     }
 
     void Climb() 
-    {
+    {   
         if (isClimbing) 
         {
             anim.SetBool("climb", true);
@@ -282,6 +362,38 @@ public class Player : MonoBehaviour
             isParrying = true;
             anim.Play("Parry1");
             parryGetPress = false;
+        }
+    }
+
+    void Death() 
+    {
+        anim.SetTrigger("death"); 
+        bodyCollider.enabled = false;
+        crouchCollider.enabled = false;
+        feetCollider.enabled = false;
+        climbCollider.enabled = false;
+        SoundManager.instance.DeathAudio();
+        GetComponent<Player>().enabled = false;
+    }
+
+    void FlashEffect(float effectTime) 
+    {
+        sR.color = new Color(0.65f,0.65f,0.65f,1);
+        Invoke("ResetColor", effectTime);
+    }
+
+    void ResetColor() 
+    {
+        sR.color = originalColor;
+    }
+
+    void Grab() 
+    {   
+        if( grabButton && greenBox && !redBox && !isGrabbing && !isClimbing)
+        {
+            isGrabbing = true;
+            anim.Play("Grab");
+            grabButton = false;
         }
     }
 
@@ -352,17 +464,15 @@ public class Player : MonoBehaviour
     }
     public bool CheckInput() 
     {
-        if (Input.anyKey) 
+
+        if ((joystick.Horizontal!=0 || downGetPress || jumpGetPress))
         {
-            if ((Input.GetButton("Horizontal") && Input.GetButton("Run")) || Input.GetButton("Horizontal") || Input.GetButton("Crouch") || Input.GetButton("Jump")) 
-            {
-                return true;
-            }
-            else 
-                return false;
-        } 
-        else
+            return true;
+        }
+        else 
+        {
             return false;
+        } 
     }
 
     public bool CheckAttack() 
@@ -375,5 +485,13 @@ public class Player : MonoBehaviour
         {
             return false;
         }
+    }
+
+    private void OnDrawGizmosSelected() 
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireCube(new Vector2(transform.position.x + (redXOffset*transform.localScale.x), transform.position.y + redYOffset), new Vector2(redXSize, redYSize));
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireCube(new Vector2(transform.position.x + (greenXOffset*transform.localScale.x), transform.position.y + greenYOffset), new Vector2(greenXSize, greenYSize));
     }  
 }

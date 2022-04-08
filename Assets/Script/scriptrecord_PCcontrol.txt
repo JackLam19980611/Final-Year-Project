@@ -1,0 +1,392 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Player : MonoBehaviour
+{
+    public Rigidbody2D rB;
+    public CapsuleCollider2D bodyCollider;
+    public BoxCollider2D feetCollider;
+    public static Player instance;
+    [SerializeField] BoxCollider2D  crouchCollider, climbCollider;
+    private LayerMask ground, wall;
+    public float horizontalMove, rBGravity;
+    public float speed, jumpingForce, runningSpeedAdjustment, originalSpeed;
+    public Animator anim;
+    public bool runGetPress, attackGetPress, jumpGetPress, downGetPress, downGetRelease, dodgeGetPress, parryGetPress;
+    public bool isMoving, isRunning, isAttacking, isCrouching, isJumping, isFalling, isClimbing, isFallingAttack, isDodging, isParrying;
+    public static int currentHP = 100, totalHP = 100;
+    public int pDamage = 20, test = 0;
+    public bool canMove = true, airAttacked, parrySuccessful, canParry= true;
+    public GameObject JumpEffect, FallEffect;
+    private bool GetPlay, fallingAttack; 
+    public bool canJump = true, changeSide = true;
+    public int dodgeSpeed;
+
+
+    // Start is called before the first frame update
+    
+    void Awake() 
+    {
+        instance = this;
+    }
+    void Start()
+    {
+        rB = GetComponent<Rigidbody2D>();
+        anim = GetComponent<Animator>();
+        //bodyCollider = GetComponent<CapsuleCollider2D>();
+        feetCollider = GetComponent<BoxCollider2D>();
+        ground = LayerMask.GetMask("Ground");
+        wall = LayerMask.GetMask("Wall");
+        originalSpeed = speed;
+        rBGravity = rB.gravityScale;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        horizontalMove = Input.GetAxisRaw("Horizontal");
+        if (Input.GetButtonDown("Run")) 
+        {   
+            runGetPress = true;
+        }
+        else if (Input.GetButtonUp("Run")) 
+        {
+            runGetPress = false;
+            anim.SetBool("isRunning", false);
+        }
+        if (Input.GetButtonDown("Jump") && canJump) 
+        {
+            jumpGetPress = true;
+        }
+        if (Input.GetButtonDown("Crouch"))  
+        {   
+            downGetPress = true;
+        }
+        else if (Input.GetButtonUp("Crouch")) 
+        {
+            downGetPress = false;
+            downGetRelease = true;
+        }
+        if (Input.GetButtonDown("Climb") && climbCollider.IsTouchingLayers(wall) && (anim.GetBool("jumping") || anim.GetBool("falling") || anim.GetBool("climb"))) 
+        {
+            isClimbing = !isClimbing;
+        }
+        if ( downGetPress && Input.GetButtonDown("Attack") && (anim.GetBool("jumping") || anim.GetBool("falling"))) 
+        {
+            fallingAttack = true;
+        }
+        if (Input.GetButtonDown("Dodge") && !isDodging && feetCollider.IsTouchingLayers(ground))
+        {
+            dodgeGetPress = true;
+        }
+        if (Input.GetButtonDown("Parry") && !isDodging && !isAttacking && !anim.GetBool("jumping") && !anim.GetBool("falling") && feetCollider.IsTouchingLayers(ground) && !isFallingAttack && !isClimbing && !isCrouching) 
+        {
+            parryGetPress = true;
+        }
+        Parry();
+        Attack();
+        AirAttacking();
+    }
+
+    void FixedUpdate() 
+    {   
+        if (!isDodging)
+        {
+            Movement();
+        }
+        Running();
+        SwitchJumpingAnimation();
+        Jumping();
+        Crouch();
+        Climb();
+        FallingAttack();
+        Dodge();
+    }
+
+    void Movement() 
+    {       
+        if (canMove && feetCollider.IsTouchingLayers(ground) && !fallingAttack && !isDodging)
+        {
+            rB.velocity = new Vector2(speed*horizontalMove*Time.fixedDeltaTime, rB.velocity.y);
+            if (horizontalMove !=0 && !isAttacking)
+            {
+                anim.SetBool("walking", true);
+                isMoving = true;
+                isRunning = false;
+            }
+            else
+            {
+                anim.SetBool("walking", false);
+                isMoving = false;
+            }
+        }
+        if (horizontalMove != 0 && !isAttacking && !anim.GetBool("jumping") && !anim.GetBool("falling") && !anim.GetBool("climb") && changeSide) 
+        {
+            transform.localScale = new Vector3(horizontalMove, transform.localScale.y, transform.localScale.z);
+        }
+    }
+
+    void Running() 
+    {   
+        if (runGetPress && horizontalMove != 0 &&!downGetPress && feetCollider.IsTouchingLayers(ground) && !isAttacking) 
+        {   
+            isRunning = true;
+            anim.SetBool("walking", false);
+            anim.SetBool("isRunning", true);
+        }
+        else if ((horizontalMove == 0 && !runGetPress) || (runGetPress && horizontalMove == 0) || isAttacking) 
+        {   
+            isRunning = false;
+        }
+    }
+
+    void Jumping() 
+    {
+        if (jumpGetPress && !anim.GetBool("crouch") && feetCollider.IsTouchingLayers(ground) && !isAttacking && !isDodging || jumpGetPress && anim.GetBool("climb") && !isAttacking && !isDodging) 
+        {   
+            JumpEffect.transform.localScale = new Vector3(Player.instance.transform.localScale.x, JumpEffect.transform.localScale.y, JumpEffect.transform.localScale.z);
+            Instantiate(JumpEffect, new Vector3(transform.position.x, transform.position.y-1, transform.position.z), Quaternion.identity);
+            rB.velocity = new Vector2(speed*horizontalMove*Time.fixedDeltaTime, jumpingForce*Time.fixedDeltaTime);
+            anim.SetBool("jumping", true);
+            jumpGetPress = false;
+            isJumping = true;   
+            isClimbing = false;
+            GetPlay = false;
+        }
+    }
+
+    void SwitchJumpingAnimation() 
+    {
+        if (anim.GetBool("jumping")) 
+        {
+            if (rB.velocity.y <= 0)
+            {   
+                isJumping = false;
+                anim.SetBool("jumping", false); // hasn't use statemachine
+                anim.SetBool("falling", true);  // hasn't use statemachine
+                isFalling = true;
+            }
+            jumpGetPress = false;
+        }
+        else if (feetCollider.IsTouchingLayers(ground)) 
+        {   
+            airAttacked = false;
+            anim.SetBool("falling", false); // hasn't use statemachine
+            isFalling = false;
+            if (GetPlay == false)
+            {   FallEffect.transform.localScale = new Vector3(Player.instance.transform.localScale.x, FallEffect.transform.localScale.y, FallEffect.transform.localScale.z); 
+                Instantiate(FallEffect, new Vector3(transform.position.x, transform.position.y-1, transform.position.z), Quaternion.identity);
+                GetPlay = true;
+            }
+        }
+        if (!feetCollider.IsTouchingLayers(ground) && rB.velocity.y < 0) 
+        {
+            anim.SetBool("falling", true); // hasn't use statemachine
+            isFalling = true;
+            jumpGetPress = false;
+        }
+        if (anim.GetBool("falling")) 
+        {
+            jumpGetPress = false;
+        }
+    }
+
+    void Attack() 
+    {
+        if (Input.GetButtonDown("Attack") && !isAttacking && !anim.GetBool("crouch") && !anim.GetBool("jumping") && !anim.GetBool("falling"))
+        {
+            isAttacking = true;
+        }
+    }
+
+    void FallingAttack() 
+    {
+        if (fallingAttack) 
+        {
+            anim.Play("FallAttack");
+            fallingAttack = false;
+            isFallingAttack = true;
+        }
+    }
+
+    void AirAttacking() 
+    {
+        if (Input.GetButtonDown("Attack") && (anim.GetBool("jumping") || anim.GetBool("falling")) && !airAttacked)
+        {   
+            airAttacked = true;
+            anim.Play("AirAttack");
+        }
+
+    }
+
+    public void PlayerTakeDamage(int mDamage) 
+    {
+        currentHP -= mDamage;
+        if (currentHP <= 0) 
+        {
+            currentHP = 0;
+            Death();
+        }
+    }
+
+    void Crouch() 
+    {
+        if (downGetPress && !anim.GetBool("jumping") && !anim.GetBool("falling") && feetCollider.IsTouchingLayers(ground) && !isFallingAttack && !isDodging) 
+        {   
+            rB.velocity = new Vector2(0, rB.velocity.y);
+            anim.SetBool("isRunning", false);
+            anim.SetBool("crouch", true);
+            isCrouching = true;
+            canMove = false;
+            jumpGetPress = false;
+            bodyCollider.enabled = false;
+            crouchCollider.enabled = true;
+        }
+        else if (downGetRelease && anim.GetBool("crouch") && !isDodging) 
+        {   
+            isCrouching = false;
+            canMove = true;
+            anim.SetBool("crouch", false);
+            downGetRelease = false;
+            bodyCollider.enabled = true;
+            crouchCollider.enabled = false;
+        }
+    }
+
+    void Climb() 
+    {
+        if (isClimbing) 
+        {
+            anim.SetBool("climb", true);
+            anim.SetBool("falling", false);
+            anim.SetBool("walking",false);
+        }
+        else 
+        {
+            anim.SetBool("climb", false);
+        }
+    }
+
+    void Dodge() 
+    {   
+        if (dodgeGetPress && canMove) 
+        {
+            rB.velocity = new Vector2(dodgeSpeed*transform.localScale.x*Time.fixedDeltaTime, rB.velocity.y);
+            anim.Play("Dodge");
+            isDodging = true;
+            dodgeGetPress = false;  
+        }
+    }
+
+    void Parry() 
+    {
+        if (parryGetPress && canParry) 
+        {
+            isParrying = true;
+            anim.Play("Parry1");
+            parryGetPress = false;
+        }
+    }
+
+    void Death() 
+    {
+        anim.SetTrigger("death"); 
+        bodyCollider.enabled = false;
+        crouchCollider.enabled = false;
+        feetCollider.enabled = false;
+        climbCollider.enabled = false;
+        GetComponent<Player>().enabled = false;
+    }
+    void ActiveCollider() 
+    {
+        bodyCollider.enabled = true;
+    }
+    void ActiveAttackCollider1() 
+    {
+        AttackColliderController1.instance.ActivateAttack1();
+    }
+
+    void InactiveAttackCollider1() 
+    {
+        AttackColliderController1.instance.InactivateAttack1();
+    }
+
+    void ActiveAttackCollider2() 
+    {
+        AttackColliderController2.instance.ActivateAttack2();
+    }
+
+    void InactiveAttackCollider2() 
+    {
+        AttackColliderController2.instance.InactivateAttack2();
+    } 
+
+    void ActiveAttackCollider3() 
+    {
+        AttackColliderController3.instance.ActivateAttack3();
+    }
+
+    void InactiveAttackCollider3() 
+    {
+        AttackColliderController3.instance.InactivateAttack3();
+    }
+
+    void ActiveFallingAttackCollider() 
+    {
+        FallingAttackCollider.instance.ActivateFallingAttack();
+    }
+
+    void InactiveFallingAttackCollider() 
+    {
+        FallingAttackCollider.instance.InactivateFallingAttack();
+    }
+
+    void ActiveAirAttack() 
+    {
+        AirAttack.instance.ActivateAirAttack();
+    }
+
+    void InActiveAirAttack() 
+    {
+        AirAttack.instance.InActivateAirAttack();
+    }
+
+    public void ActivePlayerHitBox() 
+    {
+        //PlayerHitBox.instance.ActivateHitBox();
+        bodyCollider.enabled = true;
+    }
+
+    public void InActivePlayerHitBox() 
+    {
+        //PlayerHitBox.instance.InActivateHitBox();
+        bodyCollider.enabled = false;
+    }
+    public bool CheckInput() 
+    {
+        if (Input.anyKey) 
+        {
+            if ((Input.GetButton("Horizontal") && Input.GetButton("Run")) || Input.GetButton("Horizontal") || Input.GetButton("Crouch") || Input.GetButton("Jump")) 
+            {
+                return true;
+            }
+            else 
+                return false;
+        } 
+        else
+            return false;
+    }
+
+    public bool CheckAttack() 
+    {
+        if (Input.GetButtonDown("Attack") && !anim.GetBool("crouch") && !anim.GetBool("jumping") && !anim.GetBool("falling")) 
+        {   
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }  
+}

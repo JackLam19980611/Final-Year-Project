@@ -10,6 +10,7 @@ public class ParrySuccessBehaviour : StateMachineBehaviour
     {   
         parryEffect.transform.localScale = new Vector3(Player.instance.transform.localScale.x, parryEffect.transform.localScale.y, parryEffect.transform.localScale.z);
         Instantiate(parryEffect, new Vector3 (Player.instance.transform.position.x+(1*Player.instance.transform.localScale.x), Player.instance.transform.position.y-0.4f, Player.instance.transform.position.z), Quaternion.identity);
+        SoundManager.instance.ParryAudio();
     }
 
     // OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks

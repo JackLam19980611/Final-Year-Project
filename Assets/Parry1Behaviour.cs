@@ -11,6 +11,7 @@ public class Parry1Behaviour : StateMachineBehaviour
         Player.instance.canJump = false;
         Player.instance.changeSide = false;
         Player.instance.rB.velocity = new Vector2(0, 0); 
+        SoundManager.instance.DrawSwordAudio();
     }
 
     // OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks
