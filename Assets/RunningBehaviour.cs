@@ -24,7 +24,6 @@ public class RunningBehaviour : StateMachineBehaviour
         }
         if (!Player.instance.isRunning) 
         {   
-            // if (!Input.GetButton("Horizontal") || !Input.GetButton("Run") && Input.GetButton("Horizontal"))  original 
             Player.instance.anim.Play("StopRun");
         }
     }
